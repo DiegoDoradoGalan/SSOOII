@@ -3,11 +3,11 @@
  * 
  * Program name:    Resultado.h
  
- * Author:          María Espinosa Astilleros
+ * Author:          Miguel Angel Roldan Mora
  * 
- * Date created:    9/3/2020
+ * Date created:    08/04/2022
  * 
- * Purpose:         Contains the structure of the search elements and the definition of methods of the class Resultado 
+ * Purpose:         Tiene la estructura de la clase resultado, la cual utilizaremos para mostrar de forma adecuada los datos obtenidos del fichero 
  * 
  ******************************************************/
 

@@ -1,16 +1,28 @@
+/******************************************************
+ * Project:         Práctica 2 de Sistemas Operativos II
+ * 
+ * Program name:    SSOOIIGLE.cpp
+ 
+ * Author:          Miguel Angel Roldan Mora
+ * 
+ * Date created:    08/04/2022
+ * 
+ * Purpose:         Metodo main del programa contiene los metodos mas importantes del programa, como son el buscar palabra, crear los hilos, dividir el trabajo de los hilos, etc. 
+ * 
+ ******************************************************/
 #include <iostream>
 #include <thread>
 #include <string>
-#include <algorithm> //std::for_each
+#include <algorithm> 
 #include <vector>
 #include <queue>
 #include <fstream> 
 #include <mutex>
-#include <locale>   //std::tolower
+#include <locale>   
 #include <functional>
-#include <sstream>  //std::cadenatringstream 
-#include <cctype>   //ispunct
-#include <clocale>  //std::setlocale
+#include <sstream>  
+#include <cctype>   
+#include <clocale>  
 
 #include "../include/color.h" 
 #include "../include/Resultado.h"
@@ -21,23 +33,23 @@
 
 #define  NUM_CARACTER_ERASE 1 //Number of characters erase when find symbols
 
-/*Functions declaration*/
+/*Declaracion de las funciones*/
 std::string               convertir_a_minuscula(std::string s);
-std::vector<std::string>  dividir_linea_actuals(std::string linea);
-void                      linea_actuals_por_hilo(int nHilos, int nLinea_actuals, std::string fichero, std::string palabra); 
+std::vector<std::string>  dividir_linea_actual(std::string linea);
+void                      linea_por_hilo(int nHilos, int nLinea_actuals, std::string fichero, std::string palabra); 
 void                      crear_hilos(); 
-void                      optener_linea_actual(int hilo, std::string fichero, std::string palabra);
+void                      obtener_linea_actual(int hilo, std::string fichero, std::string palabra);
 void                      buscar_palabra(std::vector<std::string> v_palabra, std::string palabra, int index, int linea_actual);
 void                      esperar_hilos();
 void                      coger_argumentos(int argc, char *argv[], std::string &fichero, std::string &palabra,int &hilos,int &nLineas_actuales);
-int                       datosar_linea_actuals(std::string nombre_fichero);
+int                       linea_actual(std::string nombre_fichero);
 
 
-/*Globals variables*/
-std::vector<std::thread>  g_hilos;   //Vector of threads
-std::vector<Resultado>    g_resultado;    //Vector of search result 
+/*Variables globales*/
+std::vector<std::thread>  g_hilos;      //Vector que contine los hilos del programa
+std::vector<Resultado>    g_resultado;  //Vector para guarda el resultado de la busqueda 
 std::mutex                g_semaforo;
-int                       g_total = 0;  //Number of times appear the word searched
+int                       g_total = 0;  //Numero de veces que aparece la palabra que buscamos
 
 
 
@@ -51,7 +63,7 @@ int main(int argc, char *argv[]){
     int nHilos;
     int nLineas_actuales;
     coger_argumentos(argc,argv,fichero, palabra,nHilos,nLineas_actuales);
-    linea_actuals_por_hilo(nHilos, nLineas_actuales,fichero, palabra); 
+    linea_por_hilo(nHilos, nLineas_actuales,fichero, palabra); 
     esperar_hilos(); 
  
     std::cout << "\nLa palabra " << CYAN <<  palabra << RESET;
@@ -61,6 +73,17 @@ int main(int argc, char *argv[]){
 
 }  
 
+/**********************
+ * 
+ * Nombre: coger_argumentos
+ * 
+ * Argumentos de entrada: int argc: entero que indica el numero de cadenas. int argv: cadena de ent
+ *                        en el fichero, int hilos: numero de hilos en los que se va a dividir el p
+ * 
+ * Descripción: Método con el que cogemos todos los datos de entrada el programa y los pasamos a la
+ *              
+ * 
+ * ********************/
 void coger_argumentos(int argc, char *argv[], std::string &fichero, std::string &palabra,int &hilos,int &nLineas_actuales){
     if(argc!=4){ 
         std::cerr << "El número de argumentos es incorrecto" <<std::endl; 
@@ -70,12 +93,12 @@ void coger_argumentos(int argc, char *argv[], std::string &fichero, std::string 
     fichero = argv[1];
     palabra = convertir_a_minuscula(argv[2]);
     hilos = atoi(argv[3]);
-    nLineas_actuales = datosar_linea_actuals(fichero);
+    nLineas_actuales = linea_actual(fichero);
 }
 
 /**********************
  * 
- * Nombre: datosar_linea_actuals
+ * Nombre: linea_actual
  * 
  * Argumentos de entrada: nombre_fichero: El nombre de un fichero
  * 
@@ -83,7 +106,7 @@ void coger_argumentos(int argc, char *argv[], std::string &fichero, std::string 
  *              que se le indique
  * 
  * ********************/
-int datosar_linea_actuals(std::string nombre_fichero){
+int linea_actual(std::string nombre_fichero){
 
     std::ifstream fichero;
     fichero.open(nombre_fichero);
@@ -126,7 +149,8 @@ std::string convertir_a_minuscula(std::string s) {
  * 
  * Nombre: buscar_palabra
  * 
- * Argumentos de entrada: string s: cadena de texto
+ * Argumentos de entrada: vector<string> v_palabra: vector que contiene las palabras de las lineas, string palabra: palabra a buscar en el texto, int index: posicion en la que nos encontramos,
+ *                        int linea_actual: linea del fichero en la que nos econtramos 
  * 
  * Descripción: Método que busca una palabra en las linea_actuals que tiene
  *              adjudicadas
@@ -137,35 +161,42 @@ void buscar_palabra(std::vector<std::string> v_palabra, std::string palabra, int
     Datos datos;
 
     for(unsigned i = 0; i < v_palabra.size(); i++){
-        if(v_palabra.at(i).compare(palabra) == 0){
+        if(v_palabra[i].compare(palabra) == 0){
             datos.nline = linea_actual;
-            datos.palabra = v_palabra.at(i); 
+            datos.palabra = v_palabra[i]; 
 
-            /*Check the inicio linea*/
-            if(i == 0){
+            if(i == 0){                                               //Comprobamos si se trata de la primera linea, ya que en ese caso no abria una palabra anterior 
                 datos.anterior = "_Es el inicio de la linea_actual_"; 
             }else{
-                datos.anterior = v_palabra.at(i-1); 
+                datos.anterior = v_palabra[i-1]; 
             }
 
-            /*Check the final linea*/
-            if(i == v_palabra.size()-1){
+            if(i == v_palabra.size()-1){                              //Comprobamos si se trata de la ultima linea, ya que en ese caso no abria una palabra posterior  
                 datos.posterior = "_Es el final de la linea_actual_";
             }else{
-                datos.posterior = v_palabra.at(i+1); 
+                datos.posterior = v_palabra[i+1]; 
             }
-
-            /*Add the result inside the vector of results*/   
+ 
             std::lock_guard<std::mutex> semaforo_lock(g_semaforo); 
-            g_total++;
-            g_resultado.at(index).llenar_cola(datos);
+            g_total++;                                               //Sumamos las veces que aparece la palabra que buscamos
+            g_resultado[index].llenar_cola(datos);                   //Llenamos la cola con los datos de la estructura 
         }
     }
 
 }
 
+/**********************
+ * 
+ * Nombre: linea_por_hilo
+ * 
+ * Argumentos de entrada: int nHilo: numero de hilos para ejecutar el programa, int nLinea_actual: linea en la que se encuntra del fichero, string fichero: nombre del fichero,
+ *                        string palabra: palabra que se va a buscar
+ * 
+ * Descripción: Método con el que crearemos los hilos y le adjudicaremos las lineas de trabajo que van a leer 
+ * 
+ * ********************/
 
-void linea_actuals_por_hilo(int nHilos, int nLinea_actuals, std::string fichero, std::string palabra){
+void linea_por_hilo(int nHilos, int nLinea_actuals, std::string fichero, std::string palabra){
     int inicio = 0; 
     int final  = 0;
     int hilo   = 0;  
@@ -179,16 +210,24 @@ void linea_actuals_por_hilo(int nHilos, int nLinea_actuals, std::string fichero,
         if(i == (nHilos -1)){ final = nLinea_actuals; } 
 
         Resultado sr(hilo, inicio, final); 
-        std::unique_lock<std::mutex> ul(g_semaforo); 
+        std::unique_lock<std::mutex> semaforo_lock(g_semaforo); 
         g_resultado.push_back(sr);  
-        ul.unlock(); 
-        g_hilos.push_back(std::thread(optener_linea_actual, hilo, fichero, palabra));
+        semaforo_lock.unlock(); 
+        g_hilos.push_back(std::thread(obtener_linea_actual, hilo, fichero, palabra));
 
     }
 }
 
-
-void optener_linea_actual(int hilo, std::string fichero, std::string palabra){
+/**********************
+ * 
+ * Nombre: obtener_linea_actual
+ * 
+ * Argumentos de entrada: int hilo: hilo que se encarga de esa parte del fichero, string fichero: nombre de fichero a tratar, string palabra: palabra que buscamos en el fichero
+ * 
+ * Descripción: Método que nos indica en la linea en la que nos encontramos en ese momento, tambien obtenemos la linea en la que empieza y finaliza el rango con el que va trabajar el hilo
+ * 
+ * ********************/
+void obtener_linea_actual(int hilo, std::string fichero, std::string palabra){
     int  principio; 
     int  fin; 
     int  index = hilo - 1;    /*Index of the vector of results*/
@@ -206,15 +245,23 @@ void optener_linea_actual(int hilo, std::string fichero, std::string palabra){
         std::getline(fp, linea, '\n'); 
         if(linea_actual >= principio){ 
             linea      = convertir_a_minuscula(linea);    
-            v_palabra  = dividir_linea_actuals(linea); 
+            v_palabra  = dividir_linea_actual(linea); 
             buscar_palabra(v_palabra, palabra, index, linea_actual);
         } 
         linea_actual++; 
     }
 }
 
-
-std::vector<std::string> dividir_linea_actuals(std::string linea){
+/**********************
+ * 
+ * Nombre: dividir_linea_actual
+ * 
+ * Argumentos de entrada: string linea: linea del fichero que leemos 
+ * 
+ * Descripción: Dividimos la linea del fichero en partes, para poder tratar los datos de una manera correcta 
+ * 
+ * ********************/
+std::vector<std::string> dividir_linea_actual(std::string linea){
 
     std::vector<std::string>  v_palabras;
     std::string               token; 
@@ -227,14 +274,20 @@ std::vector<std::string> dividir_linea_actuals(std::string linea){
     return v_palabras;
 }
 
-
+/**********************
+ * 
+ * Nombre: esperar_hilos
+ * 
+ * Descripción: Esperamos que os hilos terminen su trabajo y ademas mostramos por pantalla los datos de la cola 
+ * 
+ * ********************/
 void esperar_hilos(){
     
     std::for_each(g_hilos.begin(), g_hilos.end(), std::mem_fn(&std::thread::join)); 
 
     for(unsigned i = 0; i < g_hilos.size(); i++){
-        std::lock_guard<std::mutex> semaforo_lock(g_semaforo);
-        g_resultado.at(i).mostrar_resultado();
+        std::lock_guard<std::mutex> semaforo_lock(g_semaforo);   //Utilizamos el semaforo para poder imprimir los datos de manera correcta y no intenten imprimir todos a la vez
+        g_resultado[i].mostrar_resultado();
         
     }
     

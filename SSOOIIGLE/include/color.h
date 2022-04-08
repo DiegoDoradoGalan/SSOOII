@@ -1,10 +1,18 @@
-/***
-* Esta librería sirve para imprimir texto en color (así como el fondo) para facilitar
-* y mejorar la simulación de una búsqueda en nuestra aplicación.
-*
-* El código en su totalidad ha sido extraído del siguiente enlace:
-* https://gist.github.com/Alfonzzoj/db207b89d56f24d9d0b17ff93e091be8
-*/
+/******************************************************
+ * Project:         Práctica 2 de Sistemas Operativos II
+ * 
+ * Program name:    color.h
+ 
+ * Author:          Miguel Angel Roldan Mora
+ * 
+ * Date created:    08/04/2022
+ * 
+ * Purpose:         Esta librería sirve para imprimir texto en color (así como el fondo) para facilitar y mejorar la simulación de una búsqueda en nuestra aplicación.
+ * 
+ * El código en su totalidad ha sido extraído del siguiente enlace:
+ *https://gist.github.com/Alfonzzoj/db207b89d56f24d9d0b17ff93e091be8
+ * 
+ ******************************************************/
 
 /*===Color font code===*/
 #define BLACK   "\x1B[30m"
